@@ -179,18 +179,18 @@
 
   .year-labels {
     position: absolute;
-    left: 57.0%;
-    top: 24.3%;
-    width: 4.3%;
+    left: 56.9%;
+    top: 24.05%;
+    width: 4.7%;
     height: 52.2%;
     pointer-events: none;
   }
 
   .date-labels {
     position: absolute;
-    left: 61.9%;
-    top: 24.3%;
-    width: 5.8%;
+    left: 61.75%;
+    top: 24.05%;
+    width: 6.5%;
     height: 52.2%;
     pointer-events: none;
   }
@@ -203,9 +203,9 @@
     color: rgba(38, 56, 58, 0.88);
     background: transparent;
     font-family: "ChenYuluoyan", "Noto Serif TC", serif;
-    font-size: clamp(17px, 1.55vw, 24px);
+    font-size: clamp(16px, 1.45vw, 23px);
     line-height: 1;
-    text-align: center;
+    text-align: left;
     letter-spacing: 0.02em;
   }
 
@@ -223,10 +223,10 @@
 
   .entry-lines {
     position: absolute;
-    left: 69.2%;
-    top: 25.0%;
-    width: 22.8%;
-    height: 52.0%;
+    left: 69.05%;
+    top: 24.05%;
+    width: 22.9%;
+    height: 52.2%;
   }
 
   .entry-row {
@@ -245,22 +245,51 @@
   .paper-input {
     width: 100%;
     height: 100%;
-    border: 0;
     outline: 0;
-    resize: none;
     overflow: hidden;
     padding: 0 26px 0 0;
     color: rgba(28, 42, 42, 0.92);
     background: transparent;
     font-family: "ChenYuluoyan", "Noto Serif TC", serif;
-    font-size: clamp(18px, 1.65vw, 26px);
+    font-size: clamp(17px, 1.5vw, 24px);
     line-height: 1.38;
     letter-spacing: 0.03em;
     caret-color: var(--sage);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
-  .paper-input::placeholder {
+  .paper-input:empty::before {
+    content: attr(data-placeholder);
     color: rgba(38, 56, 58, 0.34);
+    pointer-events: none;
+  }
+
+  .memory-note {
+    position: absolute;
+    left: 47.2%;
+    top: 50.2%;
+    width: 7.6%;
+    height: 16.3%;
+    border: 0;
+    outline: 0;
+    overflow: hidden;
+    padding: 0.35em 0.45em;
+    color: rgba(28, 42, 42, 0.82);
+    background: transparent;
+    font-family: "ChenYuluoyan", "Noto Serif TC", serif;
+    font-size: clamp(13px, 1.15vw, 18px);
+    line-height: 1.45;
+    letter-spacing: 0.03em;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    caret-color: var(--sage);
+  }
+
+  .memory-note:empty::before {
+    content: attr(data-placeholder);
+    color: rgba(38, 56, 58, 0.28);
+    pointer-events: none;
   }
 
   .save-state {
@@ -315,6 +344,7 @@
     .year-labels,
     .date-labels,
     .entry-lines,
+    .memory-note,
     .save-state {
       display: none;
     }
@@ -404,6 +434,7 @@
       <div class="year-labels" id="yearLabels"></div>
       <div class="date-labels" id="dateLabels"></div>
       <div class="entry-lines" id="entryLines"></div>
+      <div class="memory-note" id="memoryNote" contenteditable="true" role="textbox" aria-label="memory label" data-placeholder="memory label"></div>
       <div class="save-state" id="saveState">已收進標本館</div>
     </section>
 
@@ -414,11 +445,13 @@
 const STORAGE_KEY = "time_specimen_entries_v2";
 const WEATHER_KEY = "time_specimen_weather_v1";
 const START_YEAR_KEY = "time_specimen_start_year_v1";
+const MEMORY_KEY = "time_specimen_memory_v1";
 
 let currentDate = new Date();
 let startYear = Number(localStorage.getItem(START_YEAR_KEY)) || currentDate.getFullYear();
 let data = readJson(STORAGE_KEY, {});
 let weatherData = readJson(WEATHER_KEY, {});
+let memoryData = readJson(MEMORY_KEY, {});
 
 function readJson(key, fallback) {
   try {
@@ -460,6 +493,7 @@ function render() {
   renderYearLabels();
   renderDateLabels();
   renderDesktopEntries();
+  renderMemoryNote();
   renderMobileEntries();
 }
 
@@ -499,17 +533,30 @@ function renderDesktopEntries() {
   getYears().forEach((year) => {
     const row = document.createElement("div");
     row.className = "entry-row";
-    const input = document.createElement("textarea");
+    const input = document.createElement("div");
     input.className = "paper-input";
-    input.maxLength = 800;
-    input.value = data[entryKey(year)] || "";
-    input.placeholder = year === currentDate.getFullYear()
+    input.contentEditable = "true";
+    input.setAttribute("role", "textbox");
+    input.setAttribute("aria-label", String(year));
+    input.dataset.placeholder = year === currentDate.getFullYear()
       ? "把今天的一句話寫在紙上..."
       : `${year} 的今天`;
-    input.addEventListener("input", () => updateEntry(year, input.value));
+    input.textContent = data[entryKey(year)] || "";
+    input.addEventListener("input", () => {
+      fitHandwriting(input);
+      updateEntry(year, input.textContent);
+    });
+    input.addEventListener("paste", pastePlainText);
     row.appendChild(input);
     wrap.appendChild(row);
+    fitHandwriting(input);
   });
+}
+
+function renderMemoryNote() {
+  const note = document.getElementById("memoryNote");
+  note.textContent = memoryData[dateKey(currentDate)] || "";
+  fitHandwriting(note);
 }
 
 function renderMobileEntries() {
@@ -535,6 +582,27 @@ function updateEntry(year, value) {
   data[entryKey(year)] = value;
   saveJson(STORAGE_KEY, data);
   showSaved();
+}
+
+function updateMemory(value) {
+  memoryData[dateKey(currentDate)] = value;
+  saveJson(MEMORY_KEY, memoryData);
+  showSaved();
+}
+
+function pastePlainText(event) {
+  event.preventDefault();
+  const text = (event.clipboardData || window.clipboardData).getData("text/plain");
+  document.execCommand("insertText", false, text);
+}
+
+function fitHandwriting(el) {
+  const length = (el.textContent || "").length;
+  if (el.classList.contains("memory-note")) {
+    el.style.fontSize = length > 55 ? "clamp(10px, 0.88vw, 14px)" : length > 30 ? "clamp(11px, 1vw, 16px)" : "";
+    return;
+  }
+  el.style.fontSize = length > 95 ? "clamp(11px, 0.95vw, 15px)" : length > 52 ? "clamp(13px, 1.12vw, 18px)" : "";
 }
 
 function showSaved() {
@@ -586,6 +654,13 @@ document.getElementById("startYearInput").addEventListener("change", (event) => 
   }
   applyStartYear(next);
 });
+
+document.getElementById("memoryNote").addEventListener("input", (event) => {
+  fitHandwriting(event.currentTarget);
+  updateMemory(event.currentTarget.textContent);
+});
+
+document.getElementById("memoryNote").addEventListener("paste", pastePlainText);
 
 render();
 </script>
