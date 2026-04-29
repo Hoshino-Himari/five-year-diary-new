@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>時間標本館</title>
+<meta name="theme-color" content="#e8dfcf">
+<link rel="manifest" href="./manifest.webmanifest">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #26383a;
+    --muted: #746f63;
+    --sage: #5f725f;
+    --paper: #fffaf0;
+    --brass: #9a7842;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--ink);
+    font-family: "Noto Sans TC", sans-serif;
+    background:
+      radial-gradient(circle at 12% 5%, rgba(255,255,255,0.55), transparent 30%),
+      linear-gradient(180deg, #eee5d6, #d8cdb8);
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px max(14px, env(safe-area-inset-left)) 10px max(14px, env(safe-area-inset-left));
+    background: rgba(242, 235, 222, 0.88);
+    border-bottom: 1px solid rgba(84, 70, 45, 0.14);
+    backdrop-filter: blur(18px);
+  }
+
+  .brand {
+    min-width: 0;
+  }
+
+  .brand-title {
+    margin: 0;
+    font-family: "Noto Serif TC", serif;
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+  }
+
+  .brand-sub {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+
+  .date-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .date-btn,
+  .today-btn {
+    border: 1px solid rgba(95, 114, 95, 0.24);
+    color: var(--ink);
+    background: rgba(255, 250, 240, 0.66);
+    border-radius: 999px;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .today-btn {
+    color: #fff;
+    background: var(--sage);
+    border-color: var(--sage);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+  }
+
+  .app {
+    width: min(100%, 1480px);
+    margin: 0 auto;
+    padding: 18px 16px 30px;
+  }
+
+  .specimen-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #d8cfbd;
+    box-shadow: 0 28px 58px rgba(42, 34, 22, 0.26);
+  }
+
+  .specimen-stage img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .date-stamp {
+    position: absolute;
+    left: 57.2%;
+    top: 23.9%;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    color: rgba(38, 56, 58, 0.78);
+    font-family: "Noto Serif TC", serif;
+    font-size: clamp(11px, 1vw, 15px);
+    letter-spacing: 0.12em;
+  }
+
+  .date-stamp input {
+    width: 7.8em;
+    border: 0;
+    border-bottom: 1px solid rgba(38, 56, 58, 0.28);
+    outline: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    text-align: center;
+  }
+
+  .weather-row {
+    position: absolute;
+    left: 72.2%;
+    top: 18.9%;
+    display: flex;
+    gap: clamp(10px, 1.7vw, 28px);
+  }
+
+  .weather-chip {
+    border: 0;
+    padding: 0;
+    color: rgba(38, 56, 58, 0.68);
+    background: transparent;
+    font-size: clamp(14px, 1.5vw, 22px);
+    cursor: pointer;
+    opacity: 0.58;
+  }
+
+  .weather-chip.active {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+
+  .entry-lines {
+    position: absolute;
+    left: 61.6%;
+    top: 26.2%;
+    width: 30.2%;
+    height: 49.8%;
+  }
+
+  .entry-row {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 15.2%;
+  }
+
+  .entry-row:nth-child(1) { top: 0; }
+  .entry-row:nth-child(2) { top: 24.3%; }
+  .entry-row:nth-child(3) { top: 48.5%; }
+  .entry-row:nth-child(4) { top: 72.8%; }
+  .entry-row:nth-child(5) { top: 97%; transform: translateY(-100%); }
+
+  .paper-input {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    outline: 0;
+    resize: none;
+    overflow: hidden;
+    padding: 0 26px 0 0;
+    color: rgba(28, 42, 42, 0.9);
+    background: transparent;
+    font-family: "Noto Serif TC", serif;
+    font-size: clamp(13px, 1.22vw, 18px);
+    line-height: 1.82;
+    caret-color: var(--sage);
+  }
+
+  .paper-input::placeholder {
+    color: rgba(38, 56, 58, 0.38);
+  }
+
+  .save-state {
+    position: absolute;
+    right: 6.4%;
+    bottom: 5.8%;
+    padding: 7px 11px;
+    border-radius: 999px;
+    color: rgba(38, 56, 58, 0.66);
+    background: rgba(255, 250, 240, 0.5);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .save-state.show {
+    opacity: 1;
+  }
+
+  .mobile-editor {
+    display: none;
+  }
+
+  @media (max-width: 760px) {
+    .topbar {
+      align-items: flex-start;
+    }
+
+    .brand-title {
+      font-size: 17px;
+    }
+
+    .app {
+      padding: 12px 10px 28px;
+    }
+
+    .specimen-stage {
+      aspect-ratio: 3 / 2;
+      border-radius: 14px;
+      box-shadow: 0 16px 34px rgba(42, 34, 22, 0.2);
+    }
+
+    .date-stamp,
+    .weather-row,
+    .entry-lines,
+    .save-state {
+      display: none;
+    }
+
+    .mobile-editor {
+      display: block;
+      margin-top: 12px;
+      padding: 16px 14px 18px;
+      border: 1px solid rgba(95, 114, 95, 0.16);
+      border-radius: 14px;
+      background:
+        linear-gradient(90deg, rgba(96,78,50,0.07) 1px, transparent 1px) 0 0 / 22px 22px,
+        var(--paper);
+      box-shadow: 0 12px 24px rgba(42, 34, 22, 0.1);
+    }
+
+    .mobile-date {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-family: "Noto Serif TC", serif;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+    }
+
+    .mobile-entry {
+      padding: 13px 0;
+      border-top: 1px solid rgba(96, 78, 50, 0.18);
+    }
+
+    .mobile-entry:first-of-type {
+      border-top: 0;
+    }
+
+    .mobile-year {
+      margin-bottom: 7px;
+      color: var(--sage);
+      font-family: "Noto Serif TC", serif;
+      font-size: 14px;
+    }
+
+    .mobile-entry textarea {
+      width: 100%;
+      min-height: 86px;
+      border: 0;
+      outline: 0;
+      resize: vertical;
+      color: var(--ink);
+      background: transparent;
+      font-family: "Noto Serif TC", serif;
+      font-size: 16px;
+      line-height: 1.75;
+    }
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1 class="brand-title">時間標本館</h1>
+      <div class="brand-sub" id="dateLabel"></div>
+    </div>
+    <div class="date-controls">
+      <button class="date-btn" type="button" onclick="changeDay(-1)" aria-label="前一天">‹</button>
+      <button class="today-btn" type="button" onclick="goToday()">今日標本</button>
+      <button class="date-btn" type="button" onclick="changeDay(1)" aria-label="後一天">›</button>
+    </div>
+  </header>
+
+  <main class="app">
+    <section class="specimen-stage" aria-label="時間標本館五年日記">
+      <img src="./assets/images/time-specimen-mockup.png" alt="">
+      <div class="weather-row" aria-label="天氣">
+        <button class="weather-chip" type="button" data-weather="sun" onclick="setWeather('sun')">☼</button>
+        <button class="weather-chip" type="button" data-weather="cloud" onclick="setWeather('cloud')">☁</button>
+        <button class="weather-chip" type="button" data-weather="moon" onclick="setWeather('moon')">☾</button>
+      </div>
+      <div class="date-stamp">
+        <span id="pageYear">2026</span>
+        <input id="pageDate" aria-label="頁面日期" readonly>
+      </div>
+      <div class="entry-lines" id="entryLines"></div>
+      <div class="save-state" id="saveState">已收進標本館</div>
+    </section>
+
+    <section class="mobile-editor" id="mobileEditor" aria-label="手機日記編輯"></section>
+  </main>
+
+<script>
+const STORAGE_KEY = "time_specimen_entries_v1";
+const WEATHER_KEY = "time_specimen_weather_v1";
+const YEARS = [2026, 2027, 2028, 2029, 2030];
+let currentDate = new Date();
+let data = readJson(STORAGE_KEY, {});
+let weatherData = readJson(WEATHER_KEY, {});
+
+function readJson(key, fallback) {
+  try {
+    return JSON.parse(localStorage.getItem(key) || "") || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveJson(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+
+function dateKey(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function entryKey(year) {
+  return `${year}-${pad(currentDate.getMonth() + 1)}-${pad(currentDate.getDate())}`;
+}
+
+function formatDate(date) {
+  const day = "日一二三四五六"[date.getDay()];
+  return `${date.getFullYear()}年 ${date.getMonth() + 1}月 ${date.getDate()}日（${day}）`;
+}
+
+function render() {
+  document.getElementById("dateLabel").textContent = formatDate(currentDate);
+  document.getElementById("pageYear").textContent = currentDate.getFullYear();
+  document.getElementById("pageDate").value = `${pad(currentDate.getMonth() + 1)} / ${pad(currentDate.getDate())}`;
+  renderWeather();
+  renderDesktopEntries();
+  renderMobileEntries();
+}
+
+function renderWeather() {
+  const value = weatherData[dateKey(currentDate)] || "";
+  document.querySelectorAll(".weather-chip").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.weather === value);
+  });
+}
+
+function renderDesktopEntries() {
+  const wrap = document.getElementById("entryLines");
+  wrap.innerHTML = "";
+  YEARS.forEach((year) => {
+    const row = document.createElement("div");
+    row.className = "entry-row";
+    const input = document.createElement("textarea");
+    input.className = "paper-input";
+    input.maxLength = 800;
+    input.value = data[entryKey(year)] || "";
+    input.placeholder = year === currentDate.getFullYear()
+      ? "把今天的一句話寫在紙上..."
+      : `${year} 的今天`;
+    input.addEventListener("input", () => updateEntry(year, input.value));
+    row.appendChild(input);
+    wrap.appendChild(row);
+  });
+}
+
+function renderMobileEntries() {
+  const wrap = document.getElementById("mobileEditor");
+  wrap.innerHTML = `<div class="mobile-date"><span>今日標本</span><span>${formatDate(currentDate)}</span></div>`;
+  YEARS.forEach((year) => {
+    const item = document.createElement("div");
+    item.className = "mobile-entry";
+    item.innerHTML = `<div class="mobile-year">${year}</div>`;
+    const textarea = document.createElement("textarea");
+    textarea.maxLength = 800;
+    textarea.value = data[entryKey(year)] || "";
+    textarea.placeholder = year === currentDate.getFullYear()
+      ? "把今天的一句話寫在紙上..."
+      : `${year} 的今天`;
+    textarea.addEventListener("input", () => updateEntry(year, textarea.value));
+    item.appendChild(textarea);
+    wrap.appendChild(item);
+  });
+}
+
+function updateEntry(year, value) {
+  data[entryKey(year)] = value;
+  saveJson(STORAGE_KEY, data);
+  showSaved();
+}
+
+function showSaved() {
+  const state = document.getElementById("saveState");
+  state.classList.add("show");
+  clearTimeout(showSaved.timer);
+  showSaved.timer = setTimeout(() => state.classList.remove("show"), 1100);
+}
+
+function setWeather(value) {
+  const key = dateKey(currentDate);
+  weatherData[key] = weatherData[key] === value ? "" : value;
+  saveJson(WEATHER_KEY, weatherData);
+  renderWeather();
+  showSaved();
+}
+
+function changeDay(offset) {
+  currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + offset);
+  render();
+}
+
+function goToday() {
+  currentDate = new Date();
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

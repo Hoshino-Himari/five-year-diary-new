@@ -1,0 +1,9 @@
+{
+  "name": "時間標本館",
+  "short_name": "標本館",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#e8dfcf",
+  "theme_color": "#e8dfcf",
+  "icons": []
+}
