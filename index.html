@@ -8,12 +8,19 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
 <style>
+  @font-face {
+    font-family: "ChenYuluoyan";
+    src: url("./assets/fonts/ChenYuluoyan-2.0-Thin.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
   :root {
     --ink: #26383a;
     --muted: #746f63;
     --sage: #5f725f;
     --paper: #fffaf0;
-    --brass: #9a7842;
   }
 
   * {
@@ -38,7 +45,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 12px max(14px, env(safe-area-inset-left)) 10px max(14px, env(safe-area-inset-left));
+    padding: 12px max(14px, env(safe-area-inset-left)) 10px;
     background: rgba(242, 235, 222, 0.88);
     border-bottom: 1px solid rgba(84, 70, 45, 0.14);
     backdrop-filter: blur(18px);
@@ -63,11 +70,43 @@
     letter-spacing: 0.12em;
   }
 
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
   .date-controls {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+  }
+
+  .year-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid rgba(95, 114, 95, 0.22);
+    border-radius: 999px;
+    color: var(--muted);
+    background: rgba(255, 250, 240, 0.66);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+
+  .year-control input {
+    width: 4.7em;
+    border: 0;
+    outline: 0;
+    color: var(--ink);
+    background: transparent;
+    font: inherit;
+    text-align: center;
   }
 
   .date-btn,
@@ -162,6 +201,35 @@
     transform: translateY(-1px);
   }
 
+  .year-labels {
+    position: absolute;
+    left: 57%;
+    top: 25.05%;
+    width: 4.1%;
+    height: 51%;
+    pointer-events: none;
+  }
+
+  .year-label {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    padding: 0.1em 0.1em;
+    color: rgba(38, 56, 58, 0.88);
+    background: rgba(255, 250, 240, 0.78);
+    font-family: "Noto Serif TC", serif;
+    font-size: clamp(11px, 1.04vw, 16px);
+    line-height: 1.1;
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+
+  .year-label:nth-child(1) { top: 0; }
+  .year-label:nth-child(2) { top: 24.3%; }
+  .year-label:nth-child(3) { top: 48.5%; }
+  .year-label:nth-child(4) { top: 72.8%; }
+  .year-label:nth-child(5) { top: 97%; transform: translateY(-100%); }
+
   .entry-lines {
     position: absolute;
     left: 61.6%;
@@ -191,16 +259,17 @@
     resize: none;
     overflow: hidden;
     padding: 0 26px 0 0;
-    color: rgba(28, 42, 42, 0.9);
+    color: rgba(28, 42, 42, 0.92);
     background: transparent;
-    font-family: "Noto Serif TC", serif;
-    font-size: clamp(13px, 1.22vw, 18px);
-    line-height: 1.82;
+    font-family: "ChenYuluoyan", "Noto Serif TC", serif;
+    font-size: clamp(18px, 1.65vw, 26px);
+    line-height: 1.38;
+    letter-spacing: 0.03em;
     caret-color: var(--sage);
   }
 
   .paper-input::placeholder {
-    color: rgba(38, 56, 58, 0.38);
+    color: rgba(38, 56, 58, 0.34);
   }
 
   .save-state {
@@ -228,10 +297,16 @@
   @media (max-width: 760px) {
     .topbar {
       align-items: flex-start;
+      flex-direction: column;
     }
 
     .brand-title {
       font-size: 17px;
+    }
+
+    .controls {
+      width: 100%;
+      justify-content: space-between;
     }
 
     .app {
@@ -246,6 +321,7 @@
 
     .date-stamp,
     .weather-row,
+    .year-labels,
     .entry-lines,
     .save-state {
       display: none;
@@ -298,9 +374,10 @@
       resize: vertical;
       color: var(--ink);
       background: transparent;
-      font-family: "Noto Serif TC", serif;
-      font-size: 16px;
-      line-height: 1.75;
+      font-family: "ChenYuluoyan", "Noto Serif TC", serif;
+      font-size: 22px;
+      line-height: 1.55;
+      letter-spacing: 0.03em;
     }
   }
 </style>
@@ -311,10 +388,16 @@
       <h1 class="brand-title">時間標本館</h1>
       <div class="brand-sub" id="dateLabel"></div>
     </div>
-    <div class="date-controls">
-      <button class="date-btn" type="button" onclick="changeDay(-1)" aria-label="前一天">‹</button>
-      <button class="today-btn" type="button" onclick="goToday()">今日標本</button>
-      <button class="date-btn" type="button" onclick="changeDay(1)" aria-label="後一天">›</button>
+    <div class="controls">
+      <label class="year-control">
+        起始年
+        <input id="startYearInput" type="number" inputmode="numeric" min="1900" max="2200" step="1" aria-label="起始年份">
+      </label>
+      <div class="date-controls">
+        <button class="date-btn" type="button" onclick="changeDay(-1)" aria-label="前一天">‹</button>
+        <button class="today-btn" type="button" onclick="goToday()">今日標本</button>
+        <button class="date-btn" type="button" onclick="changeDay(1)" aria-label="後一天">›</button>
+      </div>
     </div>
   </header>
 
@@ -330,6 +413,7 @@
         <span id="pageYear">2026</span>
         <input id="pageDate" aria-label="頁面日期" readonly>
       </div>
+      <div class="year-labels" id="yearLabels"></div>
       <div class="entry-lines" id="entryLines"></div>
       <div class="save-state" id="saveState">已收進標本館</div>
     </section>
@@ -338,10 +422,12 @@
   </main>
 
 <script>
-const STORAGE_KEY = "time_specimen_entries_v1";
+const STORAGE_KEY = "time_specimen_entries_v2";
 const WEATHER_KEY = "time_specimen_weather_v1";
-const YEARS = [2026, 2027, 2028, 2029, 2030];
+const START_YEAR_KEY = "time_specimen_start_year_v1";
+
 let currentDate = new Date();
+let startYear = Number(localStorage.getItem(START_YEAR_KEY)) || currentDate.getFullYear();
 let data = readJson(STORAGE_KEY, {});
 let weatherData = readJson(WEATHER_KEY, {});
 
@@ -355,6 +441,10 @@ function readJson(key, fallback) {
 
 function saveJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function getYears() {
+  return Array.from({ length: 5 }, (_, index) => startYear + index);
 }
 
 function pad(n) {
@@ -378,7 +468,9 @@ function render() {
   document.getElementById("dateLabel").textContent = formatDate(currentDate);
   document.getElementById("pageYear").textContent = currentDate.getFullYear();
   document.getElementById("pageDate").value = `${pad(currentDate.getMonth() + 1)} / ${pad(currentDate.getDate())}`;
+  document.getElementById("startYearInput").value = startYear;
   renderWeather();
+  renderYearLabels();
   renderDesktopEntries();
   renderMobileEntries();
 }
@@ -390,10 +482,21 @@ function renderWeather() {
   });
 }
 
+function renderYearLabels() {
+  const wrap = document.getElementById("yearLabels");
+  wrap.innerHTML = "";
+  getYears().forEach((year) => {
+    const label = document.createElement("div");
+    label.className = "year-label";
+    label.textContent = year;
+    wrap.appendChild(label);
+  });
+}
+
 function renderDesktopEntries() {
   const wrap = document.getElementById("entryLines");
   wrap.innerHTML = "";
-  YEARS.forEach((year) => {
+  getYears().forEach((year) => {
     const row = document.createElement("div");
     row.className = "entry-row";
     const input = document.createElement("textarea");
@@ -412,7 +515,7 @@ function renderDesktopEntries() {
 function renderMobileEntries() {
   const wrap = document.getElementById("mobileEditor");
   wrap.innerHTML = `<div class="mobile-date"><span>今日標本</span><span>${formatDate(currentDate)}</span></div>`;
-  YEARS.forEach((year) => {
+  getYears().forEach((year) => {
     const item = document.createElement("div");
     item.className = "mobile-entry";
     item.innerHTML = `<div class="mobile-year">${year}</div>`;
@@ -458,6 +561,31 @@ function goToday() {
   currentDate = new Date();
   render();
 }
+
+function applyStartYear(value) {
+  const next = Number(value);
+  if (!Number.isInteger(next) || next < 1900 || next > 2200) {
+    return false;
+  }
+  startYear = next;
+  localStorage.setItem(START_YEAR_KEY, String(startYear));
+  render();
+  showSaved();
+  return true;
+}
+
+document.getElementById("startYearInput").addEventListener("input", (event) => {
+  applyStartYear(event.target.value);
+});
+
+document.getElementById("startYearInput").addEventListener("change", (event) => {
+  const next = Number(event.target.value);
+  if (!Number.isInteger(next) || next < 1900 || next > 2200) {
+    event.target.value = startYear;
+    return;
+  }
+  applyStartYear(next);
+});
 
 render();
 </script>
